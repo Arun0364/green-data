@@ -165,10 +165,10 @@ You do not need to provide them manually when running the full pipeline.
 
 Copy `config.sh` from the repo root and fill in your paths:
 
-\`\`\`bash
+```bash
 # Replace <user> with your Bridges-2 username throughout the file
 nano config.sh
-\`\`\`
+```
 
 At minimum you must set:
 - `HUMAN_PEAKS`, `MOUSE_PEAKS`, `HAL_FILE` — your ATAC-seq input files
@@ -186,19 +186,19 @@ TRACE_pipeline.sh is a **submission script** — run it on the login node.
 It submits each step as a separate SLURM job and chains them with
 `--dependency=afterok` so each step only starts if the previous one succeeded.
 
-\`\`\`bash
+```bash
 # From the repo root:
 source config.sh
 bash scripts/TRACE_pipeline.sh
-\`\`\`
+```
 
 If any step fails, SLURM automatically cancels all downstream jobs.
 Monitor progress with:
 
-\`\`\`bash
+```bash
 squeue -u $USER
 sacct -u $USER --format=JobID,JobName,State,ExitCode,Elapsed -X
-\`\`\`
+```
 
 ---
 
@@ -206,13 +206,13 @@ sacct -u $USER --format=JobID,JobName,State,ExitCode,Elapsed -X
 
 If earlier steps have already been run, skip them:
 
-\`\`\`bash
+```bash
 # Skip liftover (Step 1) and PE classification (Step 2):
 bash scripts/TRACE_pipeline.sh --skip-halper --skip-pe
 
 # Run only motif analysis:
 bash scripts/TRACE_pipeline.sh --skip-halper --skip-pe --skip-great
-\`\`\`
+```
 
 ---
 
@@ -221,12 +221,12 @@ bash scripts/TRACE_pipeline.sh --skip-halper --skip-pe --skip-great
 Any config value can be overridden with a CLI flag. Flags take precedence
 over config.sh:
 
-\`\`\`bash
+```bash
 bash scripts/TRACE_pipeline.sh \
     --genome /other/path/mm10.fa \
     --jaspar /other/path/JASPAR.meme \
     --data-root /other/shared/data
-\`\`\`
+```
 
 ---
 
@@ -262,7 +262,7 @@ bash scripts/TRACE_pipeline.sh \
 Each script can also be submitted directly as a standalone SLURM job.
 Make sure `config.sh` is sourced first so all paths are exported:
 
-\`\`\`bash
+```bash
 source config.sh
 mkdir -p logs
 
@@ -271,7 +271,7 @@ sbatch scripts/run_pe_classification.sh # Step 2: PE classification
 sbatch scripts/run_rgreat.sh            # Step 3: rGREAT enrichment
 sbatch scripts/run_plots.sh             # Step 4: rGREAT plots
 sbatch scripts/run_motif_analysis.sh    # Step 5: MEME-ChIP motifs
-\`\`\`
+```
 
 > **Note:** When submitting individually, ensure each step's inputs exist
 > before submitting the next. The full pipeline script handles this automatically
@@ -329,10 +329,10 @@ liver-ATAC-OCR/
 **Job exits immediately with "Permission denied" on `/var/spool/slurm/...`**
 This means the `logs/` directory did not exist when SLURM tried to open the
 log file. Create it first:
-\`\`\`bash
+```bash
 mkdir -p logs
 bash scripts/TRACE_pipeline.sh
-\`\`\`
+```
 
 **Job is cancelled with state `DependencyNeverSatisfied`**
 An upstream step failed, so SLURM cancelled all downstream jobs automatically.

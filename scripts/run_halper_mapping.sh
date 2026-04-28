@@ -1,30 +1,51 @@
 #!/bin/bash
+# Submit from repo root:
+#   sbatch run_halper.sh
+#
+# Optional overrides:
+#   HUMAN_PEAKS=/path/to/file.gz HAL_FILE=/path/to/file.hal sbatch run_halper.sh
+
 #SBATCH -J halper_map             # Job name
 #SBATCH -p RM-shared              # Partition
 #SBATCH -N 1                      # Number of nodes
 #SBATCH -n 4                     # Number of tasks (CPUs)
 #SBATCH -t 15:00:00               # Walltime (hh:mm:ss)
 #SBATCH --mem=4G                 # Memory
-#SBATCH -o /ocean/projects/bio230007p/nrajesh2/data/halper_output/halper_%j.out
-#SBATCH -e /ocean/projects/bio230007p/nrajesh2/data/halper_output/halper_%j.err
+#SBATCH -o logs/halper_%j.out
+#SBATCH -e logs/halper_%j.err
 #SBATCH --mail-type=BEGIN,END,FAIL
-#SBATCH --mail-user=nrajesh@andrew.cmu.edu
+
+set -euo pipefail
 
 # -------------------------------
-# HALPER mapping sbatch template
+# ======= HALPER mapping =======
 # -------------------------------
+
+#Setup paths
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT="${ROOT:-$SCRIPT_DIR}"
+
+DATA_DIR="$ROOT/data"
+OUT_DIR="$ROOT/halper_output"
+LOG_DIR="$ROOT/logs"
+
+mkdir -p "$OUT_DIR" "$LOG_DIR"
+
+echo "Running HALPER with ROOT=$ROOT"
 
 # Load modules
+module purge
 module load anaconda3     
+
+source "$(conda info --base)/etc/profile.d/conda.sh"
 
 # Activate HAL conda environment
 conda activate hal
 
-# Make sure halLiftover is in PATH
-export PATH=$HOME/repos/hal/bin:$PATH
+HALPER_SCRIPT="${HALPER_SCRIPT:-$ROOT/repos/halLiftover-postprocessing/halper_map_peak_orthologs.sh}"
 
-# Make sure Python can find orthologFind
-export PYTHONPATH=$HOME/repos/halLiftover-postprocessing:$PYTHONPATH
+export PATH="$ROOT/repos/hal/bin:${PATH:-}"
+export PYTHONPATH="$ROOT/repos/halLiftover-postprocessing:${PYTHONPATH:-}"
 
 
 # -------------------------------
@@ -32,38 +53,51 @@ export PYTHONPATH=$HOME/repos/halLiftover-postprocessing:$PYTHONPATH
 # -------------------------------
 
 # Input peak files (gzipped narrowPeak)
-HUMAN_PEAKS="/ocean/projects/bio230007p/nrajesh2/data/human_liver.narrowPeak.gz"
-MOUSE_PEAKS="/ocean/projects/bio230007p/nrajesh2/data/mouse_liver.narrowPeak.gz"
-
-# Output directory (will be created if it doesn't exist)
-OUTPUT_DIR="/ocean/projects/bio230007p/nrajesh2/data/halper_output"
+HUMAN_PEAKS="${HUMAN_PEAKS:-$DATA_DIR/human_liver.narrowPeak.gz}"
+MOUSE_PEAKS="${MOUSE_PEAKS:-$DATA_DIR/mouse_liver.narrowPeak.gz}"
 
 # HAL file and species
-HAL_FILE="/ocean/projects/bio230007p/nrajesh2/data/10plusway-master.hal"
-SOURCE_SPECIES="Human"
-TARGET_SPECIES="Mouse"
+HAL_FILE="${HAL_FILE:-$ROOT/data/10plusway-master.hal}"
+SOURCE_SPECIES="${SOURCE_SPECIES:-Human}"
+TARGET_SPECIES="${TARGET_SPECIES:-Mouse}"
 
-# Path to halper script
-HALPER_SCRIPT="$HOME/repos/halLiftover-postprocessing/halper_map_peak_orthologs.sh"
+# -------------------------------
+# ===== Validate files =====
+# -------------------------------
 
+if [[ ! -f "$HUMAN_PEAKS" ]]; then
+  echo "ERROR: Human peaks not found: $HUMAN_PEAKS"
+  exit 1
+fi
 
-# Make output directory
-mkdir -p $OUTPUT_DIR
-mkdir -p logs
+if [[ ! -f "$MOUSE_PEAKS" ]]; then
+  echo "ERROR: Mouse peaks not found: $MOUSE_PEAKS"
+  exit 1
+fi
+
+if [[ ! -f "$HAL_FILE" ]]; then
+  echo "ERROR: HAL file not found: $HAL_FILE"
+  exit 1
+fi
+
+if [[ ! -f "$HALPER_SCRIPT" ]]; then
+  echo "ERROR: HALPER script not found: $HALPER_SCRIPT"
+  exit 1
+fi
 
 # Unzip BED files
 echo "Unzipping human peaks..."
-gunzip -c $HUMAN_PEAKS > $OUTPUT_DIR/human_liver.narrowPeak
+gunzip -c "$HUMAN_PEAKS" > "$OUT_DIR/human_liver.narrowPeak"
 
 echo "Unzipping mouse peaks..."
-gunzip -c $MOUSE_PEAKS > $OUTPUT_DIR/mouse_liver.narrowPeak
+gunzip -c "$MOUSE_PEAKS" > "$OUT_DIR/mouse_liver.narrowPeak"
 
 # Run HALPER mapping
 echo "Running HALPER mapping..."
-$HALPER_SCRIPT \
-    -b $OUTPUT_DIR/human_liver.narrowPeak \
-    -o $OUTPUT_DIR \
-    -s $SOURCE_SPECIES \
-    -t $TARGET_SPECIES \
-    -c $HAL_FILE
+"$HALPER_SCRIPT" \
+    -b "$OUT_DIR/human_liver.narrowPeak" \
+    -o "$OUT_DIR" \
+    -s "$SOURCE_SPECIES" \
+    -t "$TARGET_SPECIES" \
+    -c "$HAL_FILE"
 echo "HALPER mapping finished!"

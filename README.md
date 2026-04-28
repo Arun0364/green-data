@@ -15,17 +15,6 @@ Developed for **03-713: Bioinformatics Data Integration Practicum**, Spring 2026
 
 ---
 
-## Citation
-
-If you use this repository, please cite:
-
-**Evan Lin, Arunannamalai Sujatha Bharath Raj, Nikita Rajesh, Suratha Sriram**
-(2026). *TRACE: Transcription Regulatory Analysis of Conserved Elements*.
-03-713: Bioinformatics Data Integration Practicum,
-Carnegie Mellon University
-
----
-
 ## Dependencies:
 
 | Tool | Version | Purpose |
@@ -362,6 +351,8 @@ Module names differ between clusters. Check available versions with
 `module spider bedtools` or `module spider MEME-suite` and update the
 `module load` line in the relevant script. 
 
+---
+
 ## References
 
 1. Amemiya, H.M. et al. (2019). The ENCODE Blacklist: Identification of Problematic Regions of the Genome. Scientific Reports 9, 9354.
@@ -411,6 +402,14 @@ Module names differ between clusters. Check available versions with
 **Nikita Rajesh** - nrajesh@andrew.cmu.edu
 
 **Suratha Sriram** - surathas@andrew.cmu.edu
+
+---
+
+## How to Cite
+
+If you use this repository, please cite:
+
+> **Evan Lin, Arunannamalai Sujatha Bharath Raj, Nikita Rajesh, Suratha Sriram** (2026). *TRACE: Transcription Regulatory Analysis of Conserved Elements*. 03-713: Bioinformatics Data Integration Practicum, Carnegie Mellon University. https://github.com/BioinformaticsDataPracticum2026/liver-ATAC-OCR
 
 ---
 

@@ -14,7 +14,7 @@ set -euo pipefail
 
 ROOT="${ROOT:-${SLURM_SUBMIT_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}}"
 IN="$ROOT/PE_classification/input"
-OUT_ROOT="$ROOT/PE_classification/output"
+OUT_ROOT="$ROOT/PE_classification/outputs"
 ROW_OUT="$OUT_ROOT/rowcount"
 UNIQ_OUT="$OUT_ROOT/unique"
 

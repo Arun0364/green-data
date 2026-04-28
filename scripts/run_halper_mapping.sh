@@ -37,15 +37,15 @@ echo "Running HALPER with ROOT=$ROOT"
 module purge
 module load anaconda3     
 
-source "$(conda info --base)/etc/profile.d/conda.sh"
+eval "$(conda shell.bash hook)"
 
 # Activate HAL conda environment
 conda activate hal
 
 HALPER_SCRIPT="${HALPER_SCRIPT:-$ROOT/repos/halLiftover-postprocessing/halper_map_peak_orthologs.sh}"
 
-export PATH="$ROOT/repos/hal/bin:${PATH:-}"
-export PYTHONPATH="$ROOT/repos/halLiftover-postprocessing:${PYTHONPATH:-}"
+export PATH="${HAL_BIN:-$HOME/repos/hal/bin}:${PATH:-}"
+export PYTHONPATH="${HAL_PYTHONPATH:-$HOME/repos/halLiftover-postprocessing}:${PYTHONPATH:-}"
 
 
 # -------------------------------

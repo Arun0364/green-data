@@ -16,13 +16,14 @@
 
 set -euo pipefail
 
+eval "$(conda shell.bash hook)" 2>/dev/null || true
 module purge
 module load bedtools
 module load MEME-suite/5.4.1
 
 # Derive the repo root from the script's own location so the script works
 # for any user without modification.
-ROOT="${ROOT:-${SLURM_SUBMIT_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}}"
+ROOT="${ROOT:-${SLURM_SUBMIT_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}}"
 
 PE_OUT="$ROOT/PE_classification/outputs"
 ROWCOUNT="$PE_OUT/rowcount"

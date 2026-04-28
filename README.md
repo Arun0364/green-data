@@ -48,9 +48,8 @@ For HALPER and rGREAT, set up once:
 # Follow: https://github.com/pfenninglab/halLiftover-postprocessing
 
 # rGREAT - install inside your R environment
+conda create -n rgreat_env -c conda-forge -c bioconda r-base=4.3 r-ggplot2 r-biocmanager bioconductor-rgreat bioconductor-txdb.hsapiens.ucsc.hg38.knowngene bioconductor-txdb.mmusculus.ucsc.mm10.knowngene bioconductor-org.hs.eg.db bioconductor-org.mm.eg.db -y
 conda activate rgreat_env
-Rscript -e "BiocManager::install('rGREAT')"
-Rscript -e "BiocManager::install('org.Mm.eg.db')"
 ```
 
 For Motif analysis:

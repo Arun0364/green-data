@@ -12,34 +12,13 @@
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-user=surathas@andrew.cmu.edu
 
-REPO_ROOT="/ocean/projects/bio230007p/ssriram6/liver-ATAC-OCR"
+ROOT="${ROOT:-${SLURM_SUBMIT_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}}"
 DATA_ROOT="/ocean/projects/bio230007p/ikaplow"  
 
-cd "${REPO_ROOT}/rGREAT_Analysis/scripts"
+cd "$ROOT/rGREAT_Analysis/scripts"
 
-source activate rgreat_env
+module load anaconda3
+eval "$(conda shell.bash hook)"
+conda activate "${RGREAT_CONDA_ENV:-rgreat_env}"
 
-Rscript rgreat_analysis.R "${REPO_ROOT}" "${DATA_ROOT}"  
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+Rscript rgreat_analysis.R "$ROOT" "${DATA_ROOT}" 

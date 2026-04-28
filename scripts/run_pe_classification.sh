@@ -12,7 +12,7 @@
 
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ROOT="${ROOT:-${SLURM_SUBMIT_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}}"
 IN="$ROOT/PE_classification/input"
 OUT_ROOT="$ROOT/PE_classification/output"
 ROW_OUT="$OUT_ROOT/rowcount"

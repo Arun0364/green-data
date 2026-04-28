@@ -134,87 +134,159 @@ MEME-ChIP is run on FASTA sequences extracted from seven OCR sets: human enhance
  
 ---
 
-## Usage
-
 ### Inputs
 
-| File | Task | Description |
-|------|------|-------------|
-| `human_liver.narrowPeak.gz` | 2 | Human liver OCRs |
-| `mouse_liver.narrowPeak.gz` | 2 | Mouse liver OCRs |
-| `10plusway-master.hal` | 2 | HAL alignment for liftover |
-| `gencode.vM15...TSSWithStrand_sorted.bed` | 3 | TSS annotation |
-| `human_liver.HumanToMouse.HALPER.narrowPeak.gz` | 3 | HALPER liftover output |
-| `idr.conservative_peak.narrowPeak.gz` | 3 | Mouse peak file |
-| `human_liver.narrowPeak` | 4 | Human OCRs |
-| `mouse_liver.narrowPeak` | 4 | Mouse OCRs |
-| `shared_open.bed` | 4 | Shared OCRs |
-| `human_open_mouse_closed.bed` | 4 | Human-specific OCRs |
-| `mouse_open_human_closed.bed` | 4 | Mouse-specific OCRs |
-| `shared_enhancer.bed` | 5 | Shared enhancer OCRs |
-| `human_specific_enhancer.bed` | 5 | Human-specific enhancer OCRs |
-| `mouse_specific_enhancer.bed` | 5 | Mouse-specific enhancer OCRs |
-| `mm10.fa` | 5 | mm10 genome FASTA |
-| `JASPAR2026_vertebrates_combined.meme` | 5 | JASPAR motif database |
+#### User-provided inputs
 
-### Run the full pipeline (Tasks 2-5)
+These files must exist before running the pipeline. Set their paths in `config.sh`
+or pass them via CLI flags.
 
-> **Note:** Always run from the repo root directory, not from inside `scripts/`.
+| File | `config.sh` variable | Step | Description |
+|------|----------------------|------|-------------|
+| `human_liver.narrowPeak.gz` | `HUMAN_PEAKS` | 1 | Human liver ATAC-seq peaks |
+| `mouse_liver.narrowPeak.gz` | `MOUSE_PEAKS` | 1 | Mouse liver ATAC-seq peaks |
+| `10plusway-master.hal` | `HAL_FILE` | 1 | Cactus HAL whole-genome alignment |
+| `gencode.vM15...TSSWithStrand_sorted.bed` | `TSS_FILE` | 2 | TSS annotation for PE classification |
+| `mm10.fa` | `MM10_GENOME` | 5 | mm10 reference genome FASTA |
+| `JASPAR2026_vertebrates_combined.meme` | `JASPAR_DB` | 5 | JASPAR 2026 vertebrates motif database |
+| *(shared ATAC data directory)* | `DATA_ROOT` | 4 | Root path for shared human/mouse peak files used by rGREAT |
 
-```bash
+#### Pipeline-generated intermediates
+
+These files are produced automatically by earlier steps and consumed by later ones.
+You do not need to provide them manually when running the full pipeline.
+
+| File | Produced by | Consumed by | Location |
+|------|-------------|-------------|----------|
+| `human_liver.HumanToMouse.HALPER.narrowPeak.gz` | Step 1 | Step 2 | `Mapping/outputs/` |
+| `mouse_native.sorted.bed` | Step 2 | Steps 2, 5 | `PE_classification/outputs/rowcount/` |
+| `shared_open.bed` | Step 2 | Steps 4, 5 | `PE_classification/outputs/unique/` |
+| `human_open_mouse_closed.bed` | Step 2 | Steps 4, 5 | `PE_classification/outputs/unique/` |
+| `mouse_open_human_closed.bed` | Step 2 | Steps 4, 5 | `PE_classification/outputs/unique/` |
+| `shared_enhancer.bed` | Step 2 | Step 5 | `PE_classification/outputs/unique/` |
+| `human_specific_enhancer.bed` | Step 2 | Step 5 | `PE_classification/outputs/unique/` |
+| `mouse_specific_enhancer.bed` | Step 2 | Step 5 | `PE_classification/outputs/unique/` |
+| `*_GOBP.csv` | Step 3 | Step 4 | `rGREAT_Analysis/outputs/` |
+
+---
+
+## Usage
+
+### Setup (required before first run)
+
+Copy `config.sh` from the repo root and fill in your paths:
+
+\`\`\`bash
+# Replace <user> with your Bridges-2 username throughout the file
+nano config.sh
+\`\`\`
+
+At minimum you must set:
+- `HUMAN_PEAKS`, `MOUSE_PEAKS`, `HAL_FILE` — your ATAC-seq input files
+- `DATA_ROOT` — the shared ATAC-seq data directory (passed to rGREAT)
+- `MM10_GENOME`, `JASPAR_DB` — reference genome and motif database
+
+Tool paths (`HALPER_SCRIPT`, `HAL_BIN`, `HAL_PYTHONPATH`) default to
+`$HOME/repos/...` — only change these if you installed HAL/HALPER elsewhere.
+
+---
+
+### Run the full pipeline (Tasks 2–5)
+
+TRACE_pipeline.sh is a **submission script** — run it on the login node.
+It submits each step as a separate SLURM job and chains them with
+`--dependency=afterok` so each step only starts if the previous one succeeded.
+
+\`\`\`bash
+# From the repo root:
+source config.sh
+bash scripts/TRACE_pipeline.sh
+\`\`\`
+
+If any step fails, SLURM automatically cancels all downstream jobs.
+Monitor progress with:
+
+\`\`\`bash
+squeue -u $USER
+sacct -u $USER --format=JobID,JobName,State,ExitCode,Elapsed -X
+\`\`\`
+
+---
+
+### Skipping steps
+
+If earlier steps have already been run, skip them:
+
+\`\`\`bash
+# Skip liftover (Step 1) and PE classification (Step 2):
+bash scripts/TRACE_pipeline.sh --skip-halper --skip-pe
+
+# Run only motif analysis:
+bash scripts/TRACE_pipeline.sh --skip-halper --skip-pe --skip-great
+\`\`\`
+
+---
+
+### Override paths without editing config.sh
+
+Any config value can be overridden with a CLI flag. Flags take precedence
+over config.sh:
+
+\`\`\`bash
 bash scripts/TRACE_pipeline.sh \
-    --human /path/to/human_liver.narrowPeak.gz \
-    --mouse /path/to/mouse_liver.narrowPeak.gz \
-    --hal /path/to/10plusway-master.hal \
-    --tss /path/to/gencode.vM15.annotation.protTranscript.geneNames_TSSWithStrand_sorted.bed \
-    --genome /path/to/mm10.fa \
-    --jaspar /path/to/JASPAR2026_vertebrates_combined.meme
-```
+    --genome /other/path/mm10.fa \
+    --jaspar /other/path/JASPAR.meme \
+    --data-root /other/shared/data
+\`\`\`
+
+---
 
 ### Available flags
 
 | Flag | Description | Default |
 |------|-------------|---------|
-| `--human` | Human ATAC-seq peak file (.narrowPeak.gz) | - |
-| `--mouse` | Mouse ATAC-seq peak file (.narrowPeak.gz) | - |
-| `--hal` | HAL alignment file | - |
-| `--tss` | TSS annotation BED file | - |
-| `--genome` | mm10 genome FASTA | - |
-| `--jaspar` | JASPAR motif database (.meme) | - |
-| `--source-species` | Liftover source species | `Human` |
-| `--target-species` | Liftover target species | `Mouse` |
-| `--conda-env` | Conda environment for rGREAT | `rgreat_env` |
-| `--skip-halper` | Skip liftover step | - |
-| `--skip-pe` | Skip P/E classification step | — |
-| `--skip-great` | Skip rGREAT steps | — |
-| `--skip-motif` | Skip motif analysis step | — |
-| `-h`, `--help` | Show this help message and exit | - |
+| `--root DIR` | Project root directory | auto-detected |
+| `--human FILE` | Human ATAC-seq peak file (.narrowPeak.gz) | from config.sh |
+| `--mouse FILE` | Mouse ATAC-seq peak file (.narrowPeak.gz) | from config.sh |
+| `--hal FILE` | HAL alignment file (.hal) | from config.sh |
+| `--tss FILE` | TSS annotation BED file | from config.sh |
+| `--genome FILE` | mm10 genome FASTA | from config.sh |
+| `--jaspar FILE` | JASPAR motif database (.meme) | from config.sh |
+| `--data-root DIR` | Shared ATAC data root (for rGREAT) | from config.sh |
+| `--halper-script FILE` | Path to halper_map_peak_orthologs.sh | `$HOME/repos/...` |
+| `--hal-bin DIR` | Path to hal/bin directory | `$HOME/repos/hal/bin` |
+| `--hal-pythonpath DIR` | Path to halLiftover-postprocessing | `$HOME/repos/...` |
+| `--hal-conda-env ENV` | Conda env for HALPER step | `hal` |
+| `--conda-env ENV` | Conda env for rGREAT steps | `rgreat_env` |
+| `--source-species S` | Liftover source species | `Human` |
+| `--target-species T` | Liftover target species | `Mouse` |
+| `--skip-halper` | Skip Step 1 | — |
+| `--skip-pe` | Skip Step 2 | — |
+| `--skip-great` | Skip Steps 3–4 | — |
+| `--skip-motif` | Skip Step 5 | — |
+| `-h`, `--help` | Show help and exit | — |
 
-### Run individual steps
+---
 
-```bash
-bash scripts/run_halper_mapping.sh     # Task 2: HALPER mapping
-bash scripts/run_pe_classification.sh  # Task 3: P/E classification
-bash scripts/run_rgreat.sh             # Task 4: rGREAT enrichment
-bash scripts/run_plots.sh              # Task 4: rGREAT plots
-bash scripts/run_motif_analysis.sh     # Task 5: Motif enrichment
-```
+### Run individual steps manually
 
-> Individual scripts are designed to be submitted as SLURM jobs via `sbatch`. The full pipeline (`TRACE_pipeline.sh`) can be run with `bash` directly.
+Each script can also be submitted directly as a standalone SLURM job.
+Make sure `config.sh` is sourced first so all paths are exported:
 
-### External tool documentation
+\`\`\`bash
+source config.sh
+mkdir -p logs
 
-- HALPER: https://github.com/pfenninglab/halLiftover-postprocessing
-- rGREAT: https://github.com/jokergoo/rGREAT
-- MEME-ChIP: https://meme-suite.org/meme/tools/meme-chip
+sbatch scripts/run_halper_mapping.sh    # Step 1: HALPER liftover
+sbatch scripts/run_pe_classification.sh # Step 2: PE classification
+sbatch scripts/run_rgreat.sh            # Step 3: rGREAT enrichment
+sbatch scripts/run_plots.sh             # Step 4: rGREAT plots
+sbatch scripts/run_motif_analysis.sh    # Step 5: MEME-ChIP motifs
+\`\`\`
 
-### Saving outputs
-
-All results are written automatically to their respective output directories. To archive:
-
-```bash
-tar -czvf results_backup.tar.gz Mapping/outputs PE_classification/output rGREAT/outputs Motif_analysis/outputs
-```
+> **Note:** When submitting individually, ensure each step's inputs exist
+> before submitting the next. The full pipeline script handles this automatically
+> via SLURM job dependencies.
 
 ---
 
@@ -225,10 +297,10 @@ tar -czvf results_backup.tar.gz Mapping/outputs PE_classification/output rGREAT/
 | `Mapping/outputs/` | HALPER liftover result (`*.HALPER.narrowPeak.gz`) |
 | `PE_classification/outputs/rowcount/summary.tsv` | Enhancer/promoter counts (raw) |
 | `PE_classification/outputs/unique/summary.tsv` | Enhancer/promoter counts (deduplicated) |
-| `rGREAT_Analysis/outputs/plots/` | Barplots and comparison heatmap (`.png`) |
-| `Motif_analysis/outputs/meme_chip_human_specific_enhancer/` | `summary.tsv` + `meme-chip.html` |
-| `Motif_analysis/outputs/meme_chip_mouse_specific_enhancer/` | `summary.tsv` + `meme-chip.html` |
-| `logs/` | Timestamped per-step log files |
+| `rGREAT_Analysis/outputs/*.csv` | Full GO:BP enrichment results per OCR set |
+| `rGREAT_Analysis/outputs/plots/barplot_*.png` | Top-15 enriched terms per OCR set |
+| `Motif_analysis/outputs/meme_chip_*/` | Per-set MEME-ChIP results (`summary.tsv`, `meme-chip.html`) |
+| `logs/` | Per-step SLURM logs (`*.out`, `*.err`) |
 
 ---
 
@@ -236,6 +308,7 @@ tar -czvf results_backup.tar.gz Mapping/outputs PE_classification/output rGREAT/
 
 ```
 liver-ATAC-OCR/
+├── config.sh
 ├── scripts/
 │   ├── TRACE_pipeline.sh
 │   ├── run_halper_mapping.sh
@@ -261,6 +334,33 @@ liver-ATAC-OCR/
 ```
 
 ---
+
+## Troubleshooting
+
+**Job exits immediately with "Permission denied" on `/var/spool/slurm/...`**
+This means the `logs/` directory did not exist when SLURM tried to open the
+log file. Create it first:
+\`\`\`bash
+mkdir -p logs
+bash scripts/TRACE_pipeline.sh
+\`\`\`
+
+**Job is cancelled with state `DependencyNeverSatisfied`**
+An upstream step failed, so SLURM cancelled all downstream jobs automatically.
+Check the failed step's log in `logs/` to find the error.
+
+**`rgreat_analysis.R` cannot find input files**
+Confirm `DATA_ROOT` points to the correct shared data directory and that
+`PE_classification/outputs/unique/` contains the expected BED files from Step 2.
+
+**HALPER exits with `command not found`**
+The `HAL_BIN` path is not on `$PATH`. Check that `HALPER_SCRIPT`, `HAL_BIN`,
+and `HAL_PYTHONPATH` in `config.sh` point to your actual HAL installation.
+
+**`module load` fails for a tool**
+Module names differ between clusters. Check available versions with
+`module spider bedtools` or `module spider MEME-suite` and update the
+`module load` line in the relevant script. 
 
 ## References
 
